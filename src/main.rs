@@ -446,7 +446,10 @@ fn build_cmd(root: &Path, tokens: Vec<String>) {
         for plat in ALL_PLATFORMS {
             ensure_up(root, plat);
             let name = container_name(root, plat);
-            dexec_owned(&name, root, &format!("bash /app/src/docker/build-all.sh dist {plat}"), &["dist"]);
+            // `plugins/target` too: the standalone-plugin workspace keeps its
+            // cargo target dir on the bind mount (see plugins/.cargo/config.toml
+            // in the engine), so a container build roots that as well.
+            dexec_owned(&name, root, &format!("bash /app/src/docker/build-all.sh dist {plat}"), &["dist", "plugins/target"]);
         }
         return;
     }
@@ -466,7 +469,7 @@ fn build_cmd(root: &Path, tokens: Vec<String>) {
         ensure_up(root, img);
         let name = container_name(root, img);
         // Via `bash` so a checkout without exec bits still works.
-        dexec_owned(&name, root, &format!("bash /app/src/docker/build-all.sh dist {}", toks.join(" ")), &["dist"]);
+        dexec_owned(&name, root, &format!("bash /app/src/docker/build-all.sh dist {}", toks.join(" ")), &["dist", "plugins/target"]);
     }
 }
 
@@ -481,7 +484,7 @@ fn run(root: &Path, target: Option<String>) {
     if feature != "editor" && feature != "runtime" {
         fail("usage: renzora run [editor|runtime]".into());
     }
-    dexec_owned(&name, root, &format!("bash /app/src/docker/build-all.sh dist {}", host.build_arg), &["dist"]);
+    dexec_owned(&name, root, &format!("bash /app/src/docker/build-all.sh dist {}", host.build_arg), &["dist", "plugins/target"]);
 
     // Operation Merge: one binary, one flat folder. The editor and the game are
     // the SAME exe — the `renzora_editor` bundle dll beside it makes it the
